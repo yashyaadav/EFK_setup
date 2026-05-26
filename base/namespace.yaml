@@ -4,10 +4,13 @@ metadata:
   name: logging
   labels:
     app.kubernetes.io/part-of: efk
-    # PodSecurity Admission: enforce baseline (permits the privileged
-    # vm.max_map_count init container ES needs); audit/warn at restricted
-    # so the gap is visible in `kubectl get events` and on apply.
-    pod-security.kubernetes.io/enforce: baseline
+    # PodSecurity Admission: the ES vm.max_map_count init container needs
+    # `privileged: true`, which the `baseline` tier blocks (it only allows
+    # the workload-isolation defaults; privileged containers are out).
+    # `privileged` enforce is the only tier that admits us. We pair it with
+    # `audit: restricted` + `warn: restricted` so the full gap to the
+    # strictest tier is visible on every apply and in the API audit log.
+    pod-security.kubernetes.io/enforce: privileged
     pod-security.kubernetes.io/enforce-version: latest
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/audit-version: latest

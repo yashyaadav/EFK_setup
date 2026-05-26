@@ -60,12 +60,12 @@ ES, Kibana, and Fluentd all run with `automountServiceAccountToken` left at defa
 The `logging` namespace is labeled:
 
 ```
-pod-security.kubernetes.io/enforce: baseline
+pod-security.kubernetes.io/enforce: privileged
 pod-security.kubernetes.io/audit:   restricted
 pod-security.kubernetes.io/warn:    restricted
 ```
 
-`baseline` is the minimum tier that permits the `increase-vm-max-map` init container, which sets `vm.max_map_count=262144` via `sysctl -w` and requires `privileged: true` to do so. The `restricted` tier forbids privileged containers entirely, so it's surfaced via `audit` and `warn` only — anyone applying the manifests sees a `Warning: PodSecurity ...` message and the API audit log records the violation, even though the pod still gets admitted.
+The `increase-vm-max-map` init container sets `vm.max_map_count=262144` via `sysctl -w` and needs `privileged: true` to do so. Both `baseline` and `restricted` block privileged containers — only the `privileged` tier admits them. So `enforce` is `privileged`, but we set `audit` and `warn` to `restricted` so the full gap to the strictest tier shows up on every apply and in the API audit log: anyone applying the manifests sees a `Warning: PodSecurity ...` message listing every restricted-tier control the workload violates, even though the pod still gets admitted.
 
 ### Why not just use restricted?
 
@@ -74,7 +74,7 @@ Two paths to a `restricted`-compliant namespace exist:
 1. **Set `vm.max_map_count` at the node level.** A separate DaemonSet in `kube-system` runs once per node with a privileged container that sets the sysctl, then ES doesn't need the init container at all. The ES namespace can then be `restricted`. Tradeoff: requires write access to `kube-system` (often blocked on hosted control planes), introduces a separate DaemonSet to maintain, and breaks if a node is added after the DaemonSet is removed.
 2. **Use a node image where `vm.max_map_count=262144` is the default.** GKE COS, Bottlerocket, and most other modern node images already do this, in which case the init container is redundant. On those, you could drop the init container and switch to `restricted`. Hard to assume in a portable demo.
 
-This setup picks the conservative middle ground: keep the privileged init container, accept `baseline`, surface the gap via `audit`/`warn`.
+This setup picks the pragmatic middle ground: keep the privileged init container, set `enforce: privileged` (the only tier that admits it), and surface the gap to `restricted` via `audit` + `warn`.
 
 ## NetworkPolicy matrix
 

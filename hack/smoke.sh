@@ -70,16 +70,19 @@ step "5. Kibana /api/status reports available"
 PF_LOG="$(mktemp)"
 kubectl -n "${NS}" port-forward svc/kibana 5601:5601 >"${PF_LOG}" 2>&1 &
 PF_PID=$!
-trap "kill ${PF_PID} 2>/dev/null || true" EXIT
+trap "kill ${PF_PID} 2>/dev/null; wait ${PF_PID} 2>/dev/null; true" EXIT
 sleep 3
-LEVEL="$(curl -fsS http://localhost:5601/api/status 2>/dev/null \
-  | grep -oE '"level":"[a-z]+"' | head -1 | cut -d'"' -f4)"
-if [[ "${LEVEL}" == "available" ]]; then
-  pass "Kibana status: available"
-else
-  fail "Kibana status: ${LEVEL:-unreachable}"
-fi
-kill ${PF_PID} 2>/dev/null || true
+# /api/status requires basic auth when xpack.security is enabled.
+# Kibana 7.x reports status as `overall.state` (green/yellow/red);
+# 8.x uses `overall.level` (available/unavailable). Match either.
+STATUS_JSON="$(curl -fsS -u "elastic:${ES_PW}" http://localhost:5601/api/status 2>/dev/null || true)"
+STATE="$(echo "${STATUS_JSON}" | grep -oE '"(state|level)":"[a-z]+"' | head -1 | cut -d'"' -f4)"
+case "${STATE}" in
+  green|available) pass "Kibana status: ${STATE}" ;;
+  *)               fail "Kibana status: ${STATE:-unreachable}" ;;
+esac
+kill ${PF_PID} 2>/dev/null
+wait ${PF_PID} 2>/dev/null
 trap - EXIT
 
 step "6. End-to-end: deploy nginx, see its logs in Kibana index"

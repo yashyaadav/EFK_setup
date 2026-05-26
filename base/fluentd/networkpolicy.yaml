@@ -23,6 +23,21 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+    # Kubernetes API — required by the kubernetes_metadata_filter plugin to
+    # enrich log records with pod/namespace labels. The API server isn't a
+    # pod, so podSelector/namespaceSelector can't target it. We open egress
+    # to common API server ports (443 hosted/LB, 6443 kubeadm default,
+    # 8443 minikube/k3s/microk8s) — the policy is matched post-DNAT by
+    # Calico, so we need the upstream node port, not the service port.
+    # To restrict further per cluster, swap this for an `ipBlock:` matching
+    # your control-plane node range.
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
+        - protocol: TCP
+          port: 8443
     # ES REST
     - to:
         - podSelector:

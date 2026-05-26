@@ -18,7 +18,7 @@ If the init container is in `CreateContainerConfigError` with a PodSecurity viol
 kubectl get ns logging -o jsonpath='{.metadata.labels}' | tr , '\n'
 ```
 
-It should show `pod-security.kubernetes.io/enforce: baseline`. If a controller is overriding, that's the bug.
+It should show `pod-security.kubernetes.io/enforce: privileged`. If it's `baseline` or `restricted` (both block privileged containers), that's the bug.
 
 ### ES PVC stuck in Pending
 
@@ -157,7 +157,7 @@ When `kubectl apply -k` runs, you'll see:
 Warning: would violate PodSecurity "restricted:latest": privileged ...
 ```
 
-This is expected and intentional — the namespace is `enforce: baseline` (so the pod is admitted) with `audit: restricted` and `warn: restricted` (so the gap is surfaced). See [security.md](security.md#why-not-just-use-restricted) for the rationale and the workaround path.
+This is expected and intentional — the namespace is `enforce: privileged` (so the pod is admitted) with `audit: restricted` and `warn: restricted` (so the gap to the strictest tier is surfaced). See [security.md](security.md#why-not-just-use-restricted) for the rationale and the workaround path.
 
 ## Certs
 

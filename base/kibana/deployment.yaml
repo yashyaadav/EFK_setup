@@ -65,22 +65,34 @@ spec:
           - name: es-ca
             mountPath: /usr/share/kibana/config/certs
             readOnly: true
+        # /api/status requires basic auth when xpack.security is on, so
+        # httpGet can't probe it directly. Use exec with curl + creds.
+        # Liveness uses a plain TCP check so it doesn't depend on ES
+        # being reachable — if Kibana itself is wedged we want a restart,
+        # but if ES is temporarily down we don't.
         startupProbe:
-          httpGet:
-            path: /api/status
-            port: 5601
+          exec:
+            command:
+              - bash
+              - -c
+              - >
+                curl -fsS -u "elastic:${ELASTICSEARCH_PASSWORD}"
+                http://localhost:5601/api/status
           failureThreshold: 30
           periodSeconds: 10
         readinessProbe:
-          httpGet:
-            path: /api/status
-            port: 5601
+          exec:
+            command:
+              - bash
+              - -c
+              - >
+                curl -fsS -u "elastic:${ELASTICSEARCH_PASSWORD}"
+                http://localhost:5601/api/status
           initialDelaySeconds: 30
           periodSeconds: 10
           failureThreshold: 6
         livenessProbe:
-          httpGet:
-            path: /api/status
+          tcpSocket:
             port: 5601
           initialDelaySeconds: 90
           periodSeconds: 30

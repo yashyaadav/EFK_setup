@@ -9,14 +9,17 @@ spec:
       containers:
         - name: elasticsearch
           env:
+            # Single-replica bootstrap: only this one pod is a master candidate.
+            # NOTE: not setting `discovery.type: single-node` — that flag is
+            # mutually exclusive with cluster.initial_master_nodes in 7.x, and
+            # ES will fail to start if both are present. The override below
+            # gives us functionally-single-node behavior (1 master, 1 data
+            # node, cluster status will be yellow because there are no
+            # replicas to host shards, which is fine for a local demo).
             - name: discovery.seed_hosts
               value: "es-cluster-0.elasticsearch"
             - name: cluster.initial_master_nodes
               value: "es-cluster-0"
-            - name: discovery.type
-              value: "single-node"
-            - name: network.host
-              value: "0.0.0.0"
   volumeClaimTemplates:
     - metadata:
         name: data

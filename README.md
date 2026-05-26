@@ -14,7 +14,7 @@ flowchart LR
     apps[Application pods]
   end
 
-  subgraph logging[Namespace: logging  •  PSA: baseline / restricted-audit]
+  subgraph logging[Namespace: logging  •  PSA: privileged / restricted-audit]
     fluentd[Fluentd DaemonSet<br/>v1.4.2]
     es[(Elasticsearch StatefulSet<br/>7.14.0 • PVCs)]
     kibana[Kibana Deployment<br/>7.14.0]
@@ -123,13 +123,13 @@ Templates live at [base/secrets/*.example.yaml](base/secrets/) so reviewers can 
   - ES: ingress 9200 from kibana+fluentd; ingress 9300 from other ES pods.
   - Kibana: ingress 5601 (toggleable to ingress-ns); egress 9200 + DNS.
   - Fluentd: egress 9200 + DNS; no ingress.
-- **PodSecurity Admission**: namespace labeled `enforce=baseline` (permits the `vm.max_map_count` privileged init container ES needs), with `audit=restricted` and `warn=restricted` so the gap is observable. See [docs/security.md](docs/security.md) for the alternative sysctl-DaemonSet pattern.
+- **PodSecurity Admission**: namespace labeled `enforce=privileged` (the only tier that permits the `vm.max_map_count` init container ES needs — `baseline` and `restricted` both forbid privileged containers), with `audit=restricted` and `warn=restricted` so the full gap to the strictest tier is observable on every apply. See [docs/security.md](docs/security.md) for the alternative sysctl-DaemonSet pattern that lets the namespace itself be `restricted`.
 
 ## Troubleshooting
 
 See [docs/troubleshooting.md](docs/troubleshooting.md) for the cookbook. Common ones:
 
-- **ES pod CrashLoopBackOff** with `max virtual memory areas vm.max_map_count [...]` → the `increase-vm-max-map` init container failed. Confirm the namespace has `pod-security.kubernetes.io/enforce: baseline` (not `restricted`).
+- **ES pod CrashLoopBackOff** with `max virtual memory areas vm.max_map_count [...]` → the `increase-vm-max-map` init container failed or was rejected. Confirm the namespace has `pod-security.kubernetes.io/enforce: privileged` (not `baseline` or `restricted` — both block privileged containers).
 - **PVC stuck Pending** on minikube → enable a default StorageClass: `minikube addons enable default-storageclass`.
 - **Kibana stuck at "Kibana server is not ready yet"** → CA mount or password mismatch. `kubectl -n logging logs deploy/kibana | tail -50` will say which.
 - **No logs in Kibana** → in **Stack Management → Index Patterns**, create pattern `logstash-*` with timestamp field `@timestamp`.

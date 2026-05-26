@@ -14,12 +14,11 @@ spec:
     - Ingress
     - Egress
   ingress:
-    # 5601 from anywhere (NodePort access, port-forward, future Ingress).
-    # To restrict to ingress-nginx only, replace `- {}` with a namespaceSelector
-    # matching the ingress controller's namespace.
-    - from:
-        - {}
-      ports:
+    # Omitting `from` allows ingress from all sources (any pod, any namespace,
+    # plus the host node — needed for NodePort + kubectl port-forward access).
+    # To restrict to an ingress controller, replace this rule with a `from:`
+    # block referencing the controller's namespaceSelector.
+    - ports:
         - protocol: TCP
           port: 5601
   egress:

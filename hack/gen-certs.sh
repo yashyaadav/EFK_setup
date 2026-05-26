@@ -29,6 +29,15 @@ echo "Generating CA + node certificate via elasticsearch-certutil…"
 HOST_UID="$(id -u)"
 HOST_GID="$(id -g)"
 
+# Work around Docker Desktop credsStore pointing at a missing helper. We're
+# only pulling a public image, so a clean DOCKER_CONFIG with no credsStore
+# is safe and avoids `exec: "docker-credential-desktop": executable file
+# not found` on hosts where the CLI is installed without Docker Desktop.
+TMP_DOCKER_CONFIG="$(mktemp -d)"
+echo '{}' > "${TMP_DOCKER_CONFIG}/config.json"
+trap 'rm -rf "${TMP_DOCKER_CONFIG}"' EXIT
+export DOCKER_CONFIG="${TMP_DOCKER_CONFIG}"
+
 docker run --rm \
   -u "${HOST_UID}:${HOST_GID}" \
   -v "${CERT_DIR}:/certs" \
@@ -37,7 +46,7 @@ docker run --rm \
   bash -c '
     set -euo pipefail
     # 1) Build a CA (PEM, so we can extract ca.crt for Kibana/Fluentd)
-    bin/elasticsearch-certutil ca \
+    /usr/share/elasticsearch/bin/elasticsearch-certutil ca \
       --pem --silent --days 3650 \
       --out /tmp/ca.zip
     unzip -o /tmp/ca.zip -d /tmp/ >/dev/null
@@ -46,10 +55,11 @@ docker run --rm \
 
     # 2) Build a node keystore signed by that CA (PKCS12, no password).
     #    SAN covers the StatefulSet pod DNS + both services.
-    bin/elasticsearch-certutil cert \
+    /usr/share/elasticsearch/bin/elasticsearch-certutil cert \
       --silent --days 3650 \
       --ca-cert /tmp/ca/ca.crt \
       --ca-key  /tmp/ca/ca.key \
+      --pass "" \
       --name elasticsearch \
       --dns elasticsearch \
       --dns elasticsearch.logging.svc.cluster.local \
