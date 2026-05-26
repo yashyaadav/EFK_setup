@@ -69,9 +69,14 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /usr/share/elasticsearch/data
+        - name: config
+          mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+          subPath: elasticsearch.yml
+          readOnly: true
+        - name: tls
+          mountPath: /usr/share/elasticsearch/config/certs
+          readOnly: true
         env:
-          - name: cluster.name
-            value: k8s-logs
           - name: node.name
             valueFrom:
               fieldRef:
@@ -82,15 +87,26 @@ spec:
             value: "es-cluster-0,es-cluster-1,es-cluster-2"
           - name: ES_JAVA_OPTS
             value: "-Xms1g -Xmx1g"
+          - name: ELASTIC_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: elastic-credentials
+                key: password
         startupProbe:
           tcpSocket:
             port: 9200
           failureThreshold: 30
           periodSeconds: 10
         readinessProbe:
-          httpGet:
-            path: /_cluster/health?local=true
-            port: 9200
+          exec:
+            command:
+              - bash
+              - -c
+              - >
+                curl -fsS
+                -u "elastic:${ELASTIC_PASSWORD}"
+                --cacert /usr/share/elasticsearch/config/certs/ca.crt
+                "https://localhost:9200/_cluster/health?local=true"
           initialDelaySeconds: 30
           periodSeconds: 10
           failureThreshold: 6
@@ -100,6 +116,15 @@ spec:
           initialDelaySeconds: 90
           periodSeconds: 20
           failureThreshold: 5
+      volumes:
+        - name: config
+          configMap:
+            name: elasticsearch-config
+            defaultMode: 0440
+        - name: tls
+          secret:
+            secretName: es-tls
+            defaultMode: 0440
   volumeClaimTemplates:
   - metadata:
       name: data

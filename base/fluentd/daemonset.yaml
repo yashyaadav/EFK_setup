@@ -46,7 +46,20 @@ spec:
           - name:  FLUENT_ELASTICSEARCH_PORT
             value: "9200"
           - name: FLUENT_ELASTICSEARCH_SCHEME
-            value: "http"
+            value: "https"
+          - name: FLUENT_ELASTICSEARCH_SSL_VERIFY
+            value: "true"
+          - name: FLUENT_ELASTICSEARCH_SSL_VERSION
+            value: "TLSv1_2"
+          - name: FLUENT_ELASTICSEARCH_CA_PATH
+            value: "/fluentd/etc/certs/ca.crt"
+          - name: FLUENT_ELASTICSEARCH_USER
+            value: "elastic"
+          - name: FLUENT_ELASTICSEARCH_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: elastic-credentials
+                key: password
           - name: FLUENTD_SYSTEMD_CONF
             value: disable
           - name: FLUENT_CONTAINER_TAIL_EXCLUDE_PATH
@@ -57,11 +70,34 @@ spec:
             memory: 256Mi
           limits:
             memory: 768Mi
+        ports:
+          - containerPort: 24220
+            name: monitor
+            protocol: TCP
+        livenessProbe:
+          tcpSocket:
+            port: 24220
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          failureThreshold: 5
+        readinessProbe:
+          tcpSocket:
+            port: 24220
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 6
         volumeMounts:
         - name: varlog
           mountPath: /var/log
         - name: varlibdockercontainers
           mountPath: /var/lib/docker/containers
+          readOnly: true
+        - name: fluent-conf
+          mountPath: /fluentd/etc/fluent.conf
+          subPath: fluent.conf
+          readOnly: true
+        - name: es-ca
+          mountPath: /fluentd/etc/certs
           readOnly: true
       volumes:
       - name: varlog
@@ -70,3 +106,11 @@ spec:
       - name: varlibdockercontainers
         hostPath:
           path: /var/lib/docker/containers
+      - name: fluent-conf
+        configMap:
+          name: fluentd-config
+          defaultMode: 0440
+      - name: es-ca
+        secret:
+          secretName: es-ca
+          defaultMode: 0440

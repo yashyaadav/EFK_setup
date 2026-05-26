@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: elasticsearch
+  namespace: logging
+  labels:
+    app.kubernetes.io/name: elasticsearch
+    app.kubernetes.io/part-of: efk
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: elasticsearch
+  policyTypes:
+    - Ingress
+  ingress:
+    # 9200 (REST) from Kibana + Fluentd in the same namespace
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [kibana, fluentd]
+      ports:
+        - protocol: TCP
+          port: 9200
+    # 9300 (transport) from other ES pods
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: elasticsearch
+      ports:
+        - protocol: TCP
+          port: 9300

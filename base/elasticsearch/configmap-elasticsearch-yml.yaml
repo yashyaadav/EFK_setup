@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elasticsearch-config
+  namespace: logging
+  labels:
+    app.kubernetes.io/name: elasticsearch
+    app.kubernetes.io/part-of: efk
+data:
+  elasticsearch.yml: |
+    cluster.name: k8s-logs
+    network.host: 0.0.0.0
+
+    # Security
+    xpack.security.enabled: true
+    xpack.security.authc.api_key.enabled: true
+
+    # Transport TLS (node-to-node)
+    xpack.security.transport.ssl.enabled: true
+    xpack.security.transport.ssl.verification_mode: certificate
+    xpack.security.transport.ssl.keystore.path: certs/elastic-certificates.p12
+    xpack.security.transport.ssl.truststore.path: certs/elastic-certificates.p12
+
+    # HTTP TLS (client connections)
+    xpack.security.http.ssl.enabled: true
+    xpack.security.http.ssl.keystore.path: certs/elastic-certificates.p12
+    xpack.security.http.ssl.truststore.path: certs/elastic-certificates.p12

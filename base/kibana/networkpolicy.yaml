@@ -1,0 +1,39 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kibana
+  namespace: logging
+  labels:
+    app.kubernetes.io/name: kibana
+    app.kubernetes.io/part-of: efk
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: kibana
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # 5601 from anywhere (NodePort access, port-forward, future Ingress).
+    # To restrict to ingress-nginx only, replace `- {}` with a namespaceSelector
+    # matching the ingress controller's namespace.
+    - from:
+        - {}
+      ports:
+        - protocol: TCP
+          port: 5601
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: elasticsearch
+      ports:
+        - protocol: TCP
+          port: 9200

@@ -5,13 +5,27 @@ namespace: logging
 
 resources:
   - namespace.yaml
+  # Elasticsearch
+  - elasticsearch/configmap-elasticsearch-yml.yaml
   - elasticsearch/statefulset.yaml
   - elasticsearch/service-headless.yaml
   - elasticsearch/service-client.yaml
   - elasticsearch/pdb.yaml
+  - elasticsearch/networkpolicy.yaml
+  # Fluentd
   - fluentd/serviceaccount.yaml
   - fluentd/clusterrole.yaml
   - fluentd/clusterrolebinding.yaml
+  - fluentd/configmap-fluent-conf.yaml
   - fluentd/daemonset.yaml
+  - fluentd/networkpolicy.yaml
+  # Kibana
   - kibana/deployment.yaml
   - kibana/service.yaml
+  - kibana/networkpolicy.yaml
+
+# Secrets (elastic-credentials, es-tls, es-ca) are intentionally NOT listed
+# above. They are materialized by `make secrets` after `make tls-certs`, so
+# that random passwords + generated certs never enter version control. See
+# base/secrets/*.example.yaml for the schema and docs/security.md for the
+# rationale.

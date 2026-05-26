@@ -4,3 +4,12 @@ metadata:
   name: logging
   labels:
     app.kubernetes.io/part-of: efk
+    # PodSecurity Admission: enforce baseline (permits the privileged
+    # vm.max_map_count init container ES needs); audit/warn at restricted
+    # so the gap is visible in `kubectl get events` and on apply.
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest

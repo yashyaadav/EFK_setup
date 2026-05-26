@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-config
+  namespace: logging
+  labels:
+    app.kubernetes.io/name: fluentd
+    app.kubernetes.io/part-of: efk
+data:
+  # Replaces /fluentd/etc/fluent.conf in the daemonset image. We keep the
+  # image's kubernetes.conf (container log tail + metadata enrichment) and
+  # override the elasticsearch output to add TLS verification with our CA,
+  # plus a monitor_agent source for liveness/readiness probes.
+  fluent.conf: |
+    # Probe endpoint
+    <source>
+      @type monitor_agent
+      bind 0.0.0.0
+      port 24220
+    </source>
+
+    # Use the image-provided container log + kubernetes-metadata pipeline
+    @include kubernetes.conf
+
+    # Drop the logging namespace's own logs to prevent a feedback loop
+    <match kubernetes.var.log.containers.**_logging_**.log>
+      @type null
+    </match>
+
+    # Ship everything else to Elasticsearch over TLS
+    <match **>
+      @type elasticsearch
+      @id out_es
+      @log_level info
+      include_tag_key true
+
+      host "#{ENV['FLUENT_ELASTICSEARCH_HOST']}"
+      port "#{ENV['FLUENT_ELASTICSEARCH_PORT']}"
+      scheme "#{ENV['FLUENT_ELASTICSEARCH_SCHEME'] || 'https'}"
+      ssl_verify true
+      ssl_version TLSv1_2
+      ca_file "#{ENV['FLUENT_ELASTICSEARCH_CA_PATH'] || '/fluentd/etc/certs/ca.crt'}"
+
+      user "#{ENV['FLUENT_ELASTICSEARCH_USER']}"
+      password "#{ENV['FLUENT_ELASTICSEARCH_PASSWORD']}"
+
+      logstash_format true
+      logstash_prefix logstash
+      reload_connections false
+      reconnect_on_error true
+      reload_on_failure true
+      log_es_400_reason true
+
+      <buffer>
+        @type memory
+        flush_thread_count 2
+        flush_interval 5s
+        retry_forever true
+        retry_max_interval 30
+        chunk_limit_size 8M
+        total_limit_size 256M
+      </buffer>
+    </match>

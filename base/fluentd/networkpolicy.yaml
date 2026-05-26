@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: fluentd
+  namespace: logging
+  labels:
+    app.kubernetes.io/name: fluentd
+    app.kubernetes.io/part-of: efk
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: fluentd
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # ES REST
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: elasticsearch
+      ports:
+        - protocol: TCP
+          port: 9200

@@ -1,0 +1,16 @@
+# Locally-generated TLS material and passwords — never commit
+certs/
+*.p12
+*.pem
+*.key
+.env
+.env.*
+
+# Real Secret manifests (rendered from .example.yaml templates by the Makefile)
+base/secrets/elastic-credentials.yaml
+base/secrets/es-tls.yaml
+base/secrets/es-ca.yaml
+
+# OS / editor
+.DS_Store
+*.swp
