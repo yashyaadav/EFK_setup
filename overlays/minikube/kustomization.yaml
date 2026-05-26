@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+patches:
+  - path: patches/es-statefulset.yaml
+    target:
+      kind: StatefulSet
+      name: es-cluster
+  - path: patches/kibana-service-nodeport.yaml
+    target:
+      kind: Service
+      name: kibana

@@ -4,6 +4,9 @@ metadata:
   name: fluentd
   labels:
     app: fluentd
+    app.kubernetes.io/name: fluentd
+    app.kubernetes.io/component: log-collector
+    app.kubernetes.io/part-of: efk
 rules:
 - apiGroups:
   - ""

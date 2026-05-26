@@ -2,8 +2,12 @@ kind: Service
 apiVersion: v1
 metadata:
   name: elasticsearch
+  namespace: logging
   labels:
     app: elasticsearch
+    app.kubernetes.io/name: elasticsearch
+    app.kubernetes.io/component: master
+    app.kubernetes.io/part-of: efk
 spec:
   selector:
     app: elasticsearch

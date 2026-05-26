@@ -2,8 +2,13 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: fluentd
+  namespace: logging
   labels:
     app: fluentd
+    app.kubernetes.io/name: fluentd
+    app.kubernetes.io/component: log-collector
+    app.kubernetes.io/part-of: efk
+    app.kubernetes.io/version: v1.4.2
 spec:
   selector:
     matchLabels:
@@ -12,6 +17,9 @@ spec:
     metadata:
       labels:
         app: fluentd
+        app.kubernetes.io/name: fluentd
+        app.kubernetes.io/component: log-collector
+        app.kubernetes.io/part-of: efk
     spec:
       serviceAccount: fluentd
       serviceAccountName: fluentd
@@ -20,7 +28,7 @@ spec:
         image: fluent/fluentd-kubernetes-daemonset:v1.4.2-debian-elasticsearch-1.1
         env:
           - name:  FLUENT_ELASTICSEARCH_HOST
-            value: "elasticsearch.default.svc.cluster.local"
+            value: "elasticsearch.logging.svc.cluster.local"
           - name:  FLUENT_ELASTICSEARCH_PORT
             value: "9200"
           - name: FLUENT_ELASTICSEARCH_SCHEME

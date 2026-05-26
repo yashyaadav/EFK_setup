@@ -2,10 +2,16 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: es-cluster
-  namespace: kube-logging
+  namespace: logging
+  labels:
+    app: elasticsearch
+    app.kubernetes.io/name: elasticsearch
+    app.kubernetes.io/component: master
+    app.kubernetes.io/part-of: efk
+    app.kubernetes.io/version: 7.14.0
 spec:
   serviceName: elasticsearch
-  replicas: 1  # Single node setup
+  replicas: 3
   selector:
     matchLabels:
       app: elasticsearch
@@ -13,6 +19,9 @@ spec:
     metadata:
       labels:
         app: elasticsearch
+        app.kubernetes.io/name: elasticsearch
+        app.kubernetes.io/component: master
+        app.kubernetes.io/part-of: efk
     spec:
       containers:
       - name: elasticsearch
@@ -40,13 +49,11 @@ spec:
               fieldRef:
                 fieldPath: metadata.name
           - name: discovery.seed_hosts
-            value: "es-cluster-0.elasticsearch"
+            value: "es-cluster-0.elasticsearch,es-cluster-1.elasticsearch,es-cluster-2.elasticsearch"
           - name: cluster.initial_master_nodes
-            value: "es-cluster-0"
+            value: "es-cluster-0,es-cluster-1,es-cluster-2"
           - name: ES_JAVA_OPTS
             value: "-Xms512m -Xmx512m"
-          - name: network.host
-            value: "0.0.0.0"  # Add this line to bind Elasticsearch to all network interfaces
       initContainers:
       - name: fix-permissions
         image: busybox
@@ -73,7 +80,7 @@ spec:
         app: elasticsearch
     spec:
       accessModes: [ "ReadWriteOnce" ]
-      storageClassName: standard  # Use your default storage class
+      # storageClassName: ""
       resources:
         requests:
-          storage: 5Gi  # Adjusted to 5Gi
+          storage: 3Gi

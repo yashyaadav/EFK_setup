@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: es-cluster
+spec:
+  replicas: 3
+  template:
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: elasticsearch
+                topologyKey: topology.kubernetes.io/zone
+            - weight: 50
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: elasticsearch
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: elasticsearch
+          env:
+            - name: discovery.seed_hosts
+              value: "es-cluster-0.elasticsearch,es-cluster-1.elasticsearch,es-cluster-2.elasticsearch"
+            - name: cluster.initial_master_nodes
+              value: "es-cluster-0,es-cluster-1,es-cluster-2"
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          app: elasticsearch
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        # Uncomment and set for your cloud provider:
+        # storageClassName: gp3       # AWS EKS
+        # storageClassName: pd-ssd    # GKE
+        # storageClassName: managed-csi # AKS
+        resources:
+          requests:
+            storage: 20Gi

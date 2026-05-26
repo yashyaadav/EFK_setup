@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: logging
+
+resources:
+  - namespace.yaml
+  - elasticsearch/statefulset.yaml
+  - elasticsearch/service-headless.yaml
+  - fluentd/serviceaccount.yaml
+  - fluentd/clusterrole.yaml
+  - fluentd/clusterrolebinding.yaml
+  - fluentd/daemonset.yaml
+  - kibana/deployment.yaml
+  - kibana/service.yaml

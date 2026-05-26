@@ -2,8 +2,13 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kibana
+  namespace: logging
   labels:
     app: kibana
+    app.kubernetes.io/name: kibana
+    app.kubernetes.io/component: ui
+    app.kubernetes.io/part-of: efk
+    app.kubernetes.io/version: 7.14.0
 spec:
   replicas: 1
   selector:
@@ -13,6 +18,9 @@ spec:
     metadata:
       labels:
         app: kibana
+        app.kubernetes.io/name: kibana
+        app.kubernetes.io/component: ui
+        app.kubernetes.io/part-of: efk
     spec:
       containers:
       - name: kibana
