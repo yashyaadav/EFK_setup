@@ -7,6 +7,8 @@ resources:
   - namespace.yaml
   - elasticsearch/statefulset.yaml
   - elasticsearch/service-headless.yaml
+  - elasticsearch/service-client.yaml
+  - elasticsearch/pdb.yaml
   - fluentd/serviceaccount.yaml
   - fluentd/clusterrole.yaml
   - fluentd/clusterrolebinding.yaml

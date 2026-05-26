@@ -23,14 +23,42 @@ spec:
         app.kubernetes.io/component: master
         app.kubernetes.io/part-of: efk
     spec:
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        fsGroup: 1000
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: elasticsearch
+                topologyKey: kubernetes.io/hostname
+      initContainers:
+      - name: increase-vm-max-map
+        image: busybox:1.36
+        command: ["sysctl", "-w", "vm.max_map_count=262144"]
+        securityContext:
+          privileged: true
+          runAsUser: 0
       containers:
       - name: elasticsearch
         image: docker.elastic.co/elasticsearch/elasticsearch:7.14.0
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         resources:
-            limits:
-              cpu: 1000m
-            requests:
-              cpu: 100m
+          requests:
+            cpu: 500m
+            memory: 1.5Gi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
         ports:
         - containerPort: 9200
           name: rest
@@ -53,34 +81,32 @@ spec:
           - name: cluster.initial_master_nodes
             value: "es-cluster-0,es-cluster-1,es-cluster-2"
           - name: ES_JAVA_OPTS
-            value: "-Xms512m -Xmx512m"
-      initContainers:
-      - name: fix-permissions
-        image: busybox
-        command: ["sh", "-c", "chown -R 1000:1000 /usr/share/elasticsearch/data"]
-        securityContext:
-          privileged: true
-        volumeMounts:
-        - name: data
-          mountPath: /usr/share/elasticsearch/data
-      - name: increase-vm-max-map
-        image: busybox
-        command: ["sysctl", "-w", "vm.max_map_count=262144"]
-        securityContext:
-          privileged: true
-      - name: increase-fd-ulimit
-        image: busybox
-        command: ["sh", "-c", "ulimit -n 65536"]
-        securityContext:
-          privileged: true
+            value: "-Xms1g -Xmx1g"
+        startupProbe:
+          tcpSocket:
+            port: 9200
+          failureThreshold: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /_cluster/health?local=true
+            port: 9200
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 6
+        livenessProbe:
+          tcpSocket:
+            port: 9200
+          initialDelaySeconds: 90
+          periodSeconds: 20
+          failureThreshold: 5
   volumeClaimTemplates:
   - metadata:
       name: data
       labels:
         app: elasticsearch
     spec:
-      accessModes: [ "ReadWriteOnce" ]
-      # storageClassName: ""
+      accessModes: ["ReadWriteOnce"]
       resources:
         requests:
-          storage: 3Gi
+          storage: 5Gi

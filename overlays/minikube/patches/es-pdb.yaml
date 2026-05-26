@@ -1,0 +1,5 @@
+- op: remove
+  path: /spec/minAvailable
+- op: add
+  path: /spec/maxUnavailable
+  value: 1

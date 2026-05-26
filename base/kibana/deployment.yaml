@@ -22,16 +22,45 @@ spec:
         app.kubernetes.io/component: ui
         app.kubernetes.io/part-of: efk
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: kibana
         image: docker.elastic.co/kibana/kibana:7.14.0
+        securityContext:
+          runAsUser: 1000
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         resources:
-          limits:
-            cpu: 1000m
           requests:
             cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
         env:
-          - name: ELASTICSEARCH_URL
-            value: http://elasticsearch:9200
+          - name: ELASTICSEARCH_HOSTS
+            value: http://elasticsearch-client.logging.svc.cluster.local:9200
         ports:
         - containerPort: 5601
+          name: http
+        startupProbe:
+          httpGet:
+            path: /api/status
+            port: 5601
+          failureThreshold: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/status
+            port: 5601
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 6
+        livenessProbe:
+          httpGet:
+            path: /api/status
+            port: 5601
+          initialDelaySeconds: 90
+          periodSeconds: 30

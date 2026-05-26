@@ -13,3 +13,7 @@ patches:
     target:
       kind: Service
       name: kibana
+  - path: patches/es-pdb.yaml
+    target:
+      kind: PodDisruptionBudget
+      name: elasticsearch

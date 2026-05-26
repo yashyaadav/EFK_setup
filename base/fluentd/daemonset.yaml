@@ -23,12 +23,26 @@ spec:
     spec:
       serviceAccount: fluentd
       serviceAccountName: fluentd
+      terminationGracePeriodSeconds: 30
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
       containers:
       - name: fluentd
         image: fluent/fluentd-kubernetes-daemonset:v1.4.2-debian-elasticsearch-1.1
+        securityContext:
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+            add: ["DAC_READ_SEARCH"]
         env:
           - name:  FLUENT_ELASTICSEARCH_HOST
-            value: "elasticsearch.logging.svc.cluster.local"
+            value: "elasticsearch-client.logging.svc.cluster.local"
           - name:  FLUENT_ELASTICSEARCH_PORT
             value: "9200"
           - name: FLUENT_ELASTICSEARCH_SCHEME
@@ -38,18 +52,17 @@ spec:
           - name: FLUENT_CONTAINER_TAIL_EXCLUDE_PATH
             value: /var/log/containers/fluent*
         resources:
-          limits:
-            memory: 512Mi
           requests:
-            cpu: 100m
-            memory: 200Mi
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            memory: 768Mi
         volumeMounts:
         - name: varlog
           mountPath: /var/log
         - name: varlibdockercontainers
           mountPath: /var/lib/docker/containers
           readOnly: true
-      terminationGracePeriodSeconds: 30
       volumes:
       - name: varlog
         hostPath:
